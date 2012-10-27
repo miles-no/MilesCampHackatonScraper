@@ -36,7 +36,7 @@
 (defn extract-bio [text]
   (.replaceAll (.replaceAll text "\n" "") "[\\s]+" " "))
 
-(defn get-info [link]
+(defn get-info [link city]
   (let [page (fetch-url link)
         details (html/select (fetch-url link) [:#medarbeiderVisning :p])
         image-link (get-in (first (html/select page [:.ansattbildeContainer :img])) [:attrs :src])
@@ -44,22 +44,22 @@
         full-name (first (html/select page [:#medarbeiderVisning :h2 html/content]))
         role (extract-role (first (:content (first details))))
         bio (extract-bio (first (:content (second details))))]
-    {:id id :name full-name :image image-link :role role :bio bio}))
+    {:id id :name full-name :image image-link :role role :bio bio :branch city}))
 
-(defn get-branch [branch]
-  (reduce (fn [so-far i] (conj so-far (get-info i))) [] (people branch)))
+(defn get-branch [branch city]
+  (reduce (fn [so-far i] (conj so-far (get-info i city))) [] (people branch)))
 
 
 (defn extract-all []
-  (let [oslo (get-branch *oslo-people*)
-        bergen (get-branch *bergen-people*)
-        stavanger (get-branch *stavanger-people*)]
-    {:oslo oslo :bergen bergen :stavanger stavanger}))
+  (let [oslo (get-branch *oslo-people* "Oslo")
+        bergen (get-branch *bergen-people* "Bergen")
+        stavanger (get-branch *stavanger-people* "Stavanger")]
+    (flatten (conj [] oslo bergen stavanger))))
 
-(def all (extract-all))
+(def all
+  (extract-all))
 
 (defn print-file [name data]
-  (json/generate-string all)
-  (with-open [wrtr (writer name)]
+    (with-open [wrtr (io/writer name)]
     (.write wrtr data)))
 
